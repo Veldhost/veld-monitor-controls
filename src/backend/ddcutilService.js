@@ -20,7 +20,6 @@ export class DdcutilServiceBackend {
     constructor(settings = null) {
         this._settings = settings;
         this._cancellable = new Gio.Cancellable();
-        this._destroyed = false;
         this._version = null;
         this._displayAttributes = null;
     }
@@ -55,7 +54,7 @@ export class DdcutilServiceBackend {
                 timeout: 15000,
             });
         } catch (error) {
-            if (this._destroyed)
+            if (this._cancellable.is_cancelled())
                 throw error;
             throw new Error(`ddcutil-service ${method} failed: ${error.message}`);
         }
@@ -162,9 +161,7 @@ export class DdcutilServiceBackend {
     }
 
     destroy() {
-        this._destroyed = true;
         this._cancellable.cancel();
-        this._cancellable = null;
     }
 }
 

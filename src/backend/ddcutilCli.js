@@ -20,17 +20,17 @@ const ERROR_PATTERNS = [
 ];
 
 export class DdcutilCliBackend {
-    constructor(settings = null) {
+    constructor(settings) {
         this._settings = settings;
-        this._destroyed = false;
+        this._cancellable = new Gio.Cancellable();
         this._processes = new Set();
         this._timeouts = new Set();
         this._lock = Promise.resolve();
-        this._path = settings?.get_string('ddcutil-path')?.trim() || 'ddcutil';
-        this._sleepMultiplier = settings?.get_double('sleep-multiplier') ?? 1.0;
+        this._path = settings.get_string('ddcutil-path').trim() || 'ddcutil';
+        this._sleepMultiplier = settings.get_double('sleep-multiplier');
         this._extraArgs = [];
 
-        const extra = settings?.get_string('ddcutil-extra-args')?.trim() ?? '';
+        const extra = settings.get_string('ddcutil-extra-args').trim();
         if (extra) {
             try {
                 this._extraArgs = GLib.shell_parse_argv(extra)[1];
@@ -69,7 +69,7 @@ export class DdcutilCliBackend {
     }
 
     async _run(args, cancellable = null) {
-        if (this._destroyed)
+        if (this._cancellable.is_cancelled())
             throw new Error('ddcutil backend destroyed');
 
         const process = this._spawn(args);
@@ -83,26 +83,23 @@ export class DdcutilCliBackend {
         });
         this._timeouts.add(timeoutId);
 
+        let stdout, stderr;
         try {
-            const [stdout, stderr] = await process.communicate_utf8_async(null, cancellable);
-            const output = `${stdout ?? ''}${stderr ?? ''}`.trim();
-            const failed = ERROR_PATTERNS.some(pattern => pattern.test(output));
-
-            if (timedOut)
-                throw new Error('ddcutil timed out');
-            if (!process.get_successful() || failed)
-                throw new Error(output || `ddcutil exited with status ${process.get_exit_status()}`);
-
-            return stdout ?? '';
-        } catch (error) {
-            if (this._destroyed || error.matches?.(Gio.IOErrorEnum, Gio.IOErrorEnum.CANCELLED))
-                throw error;
-            throw new Error(error.message || 'ddcutil failed');
+            [stdout, stderr] = await process.communicate_utf8_async(null, cancellable);
         } finally {
             if (this._timeouts.delete(timeoutId))
                 GLib.source_remove(timeoutId);
             this._processes.delete(process);
         }
+
+        if (timedOut)
+            throw new Error('ddcutil timed out');
+
+        const output = `${stdout}${stderr}`.trim();
+        if (!process.get_successful() || ERROR_PATTERNS.some(pattern => pattern.test(output)))
+            throw new Error(output || `ddcutil exited with status ${process.get_exit_status()}`);
+
+        return stdout;
     }
 
     // One ddcutil process at a time, so displays on the same GPU do not
@@ -170,7 +167,7 @@ export class DdcutilCliBackend {
     }
 
     destroy() {
-        this._destroyed = true;
+        this._cancellable.cancel();
 
         for (const id of this._timeouts)
             GLib.source_remove(id);
@@ -182,7 +179,7 @@ export class DdcutilCliBackend {
     }
 }
 
-export function cliIsAvailable(settings = null) {
-    const path = settings?.get_string('ddcutil-path')?.trim() || 'ddcutil';
+export function cliIsAvailable(settings) {
+    const path = settings.get_string('ddcutil-path').trim() || 'ddcutil';
     return Boolean(GLib.find_program_in_path(path));
 }

@@ -55,7 +55,7 @@ export function fmtPercent(fraction) {
 }
 
 export function logDebug(settings, ...args) {
-    if (settings?.get_boolean('debug-logging'))
+    if (settings.get_boolean('debug-logging'))
         console.log('[veld-monitor-controls]', ...args);
 }
 

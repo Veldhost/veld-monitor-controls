@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1 — 2026-10-25
+
+- Stop pending work through the existing cancellables instead of separate destroyed flags
+- Remove optional checks and error wrappers for values that are always present
+- Create backends through one helper; log the service-to-CLI fallback as debug output
+
 ## 1.0.0 — 2026-10-25
 
 First public release.

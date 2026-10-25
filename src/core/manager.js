@@ -7,20 +7,19 @@ import GLib from 'gi://GLib';
 import {createBackend} from '../backend/backend.js';
 import {VCP} from './capabilities.js';
 import {getMutterDisplays, pairDisplays} from './displayLayout.js';
-import {clamp, logDebug, logError} from './util.js';
+import {clamp, logDebug} from './util.js';
 
 const READ_ONLY_CODES = new Set([VCP.INPUT_SOURCE, VCP.COLOR_PRESET]);
 
 // Owns the DDC backend and the current display values.  No Shell imports.
 export class DdcManager {
-    constructor(settings, {onWarning = null} = {}) {
+    constructor(settings, {onWarning = () => {}} = {}) {
         this._settings = settings;
         this._onWarning = onWarning;
         this._backend = null;
         this._displays = [];
         this._listeners = new Set();
         this._cancellable = new Gio.Cancellable();
-        this._destroyed = false;
         this._refreshing = false;
         this._refreshingValues = false;
         this._queues = new Map();
@@ -48,13 +47,8 @@ export class DdcManager {
     }
 
     _emit() {
-        for (const listener of [...this._listeners]) {
-            try {
-                listener(this);
-            } catch (error) {
-                logError('listener failed', error.message);
-            }
-        }
+        for (const listener of [...this._listeners])
+            listener(this);
     }
 
     _warn(key, message) {
@@ -62,7 +56,7 @@ export class DdcManager {
         if (this._warned.has(key))
             return;
         this._warned.add(key);
-        this._onWarning?.(message);
+        this._onWarning(message);
     }
 
     // Also used to reload the backend after its settings change.
@@ -75,14 +69,14 @@ export class DdcManager {
         try {
             backend = await createBackend(this._settings, this._cancellable);
         } catch (error) {
-            if (this._destroyed)
+            if (this._cancellable.is_cancelled())
                 return false;
             this._warn('backend', error.message);
             this._emit();
             return false;
         }
 
-        if (this._destroyed) {
+        if (this._cancellable.is_cancelled()) {
             backend.destroy();
             return false;
         }
@@ -93,7 +87,7 @@ export class DdcManager {
     }
 
     async refresh() {
-        if (!this._backend || this._refreshing || this._destroyed)
+        if (!this._backend || this._refreshing || this._cancellable.is_cancelled())
             return false;
 
         this._refreshing = true;
@@ -105,7 +99,7 @@ export class DdcManager {
             const displays = [];
 
             for (const display of paired) {
-                if (this._destroyed)
+                if (this._cancellable.is_cancelled())
                     return false;
 
                 const result = {...display};
@@ -157,14 +151,14 @@ export class DdcManager {
                 displays.push(result);
             }
 
-            if (this._destroyed)
+            if (this._cancellable.is_cancelled())
                 return false;
 
             this._displays = displays;
             this._emit();
             return true;
         } catch (error) {
-            if (this._destroyed)
+            if (this._cancellable.is_cancelled())
                 return false;
 
             this._warn('refresh', error.message);
@@ -176,7 +170,7 @@ export class DdcManager {
     }
 
     async refreshValues() {
-        if (!this._backend || this._refreshingValues || this._destroyed)
+        if (!this._backend || this._refreshingValues || this._cancellable.is_cancelled())
             return false;
 
         this._refreshingValues = true;
@@ -402,7 +396,7 @@ export class DdcManager {
         queue.writing = true;
 
         try {
-            while (!this._destroyed && queue.pending !== null) {
+            while (!this._cancellable.is_cancelled() && queue.pending !== null) {
                 const value = queue.pending;
                 queue.pending = null;
 
@@ -423,7 +417,7 @@ export class DdcManager {
                     queue.last = value;
                     queue.display.error = null;
                 } catch (error) {
-                    if (this._destroyed)
+                    if (this._cancellable.is_cancelled())
                         break;
 
                     queue.display.error = error.message;
@@ -461,7 +455,6 @@ export class DdcManager {
     }
 
     destroy() {
-        this._destroyed = true;
         this._cancellable.cancel();
         this._backend?.destroy();
 
