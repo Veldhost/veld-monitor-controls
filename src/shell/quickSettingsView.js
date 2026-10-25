@@ -25,7 +25,6 @@ export class QuickSettingsView {
         this._extension = extension;
         this._manager = manager;
         this._settings = settings;
-        this._destroyed = false;
         this._masterDragging = false;
         this._pendingMaster = null;
         this._refreshing = false;
@@ -131,7 +130,7 @@ export class QuickSettingsView {
         this._refreshing = true;
         this._setRefreshBusy(true);
         await this._manager.refresh();
-        if (this._destroyed)
+        if (!this._slider)
             return;
         this._refreshing = false;
         this._setRefreshBusy(false);
@@ -150,9 +149,6 @@ export class QuickSettingsView {
     }
 
     sync() {
-        if (this._destroyed)
-            return;
-
         const displays = this._manager.displays;
         const brightnessDisplays = displays.filter(display =>
             this._manager.getControlRange(display, VCP.BRIGHTNESS) !== null);
@@ -432,7 +428,6 @@ export class QuickSettingsView {
     }
 
     destroy() {
-        this._destroyed = true;
         this._unsubscribe();
         this._slider.menu.destroy();
         this._slider.destroy();
