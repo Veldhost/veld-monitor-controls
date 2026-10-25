@@ -1,0 +1,10 @@
+{
+  "uuid": "veld-monitor-controls@veldhost.eu",
+  "name": "Veld Monitor Controls",
+  "description": "Brightness, contrast, input, color and audio controls for external monitors in GNOME Quick Settings.\n\n* Per-monitor brightness and a master slider above volume\n* Contrast, monitor volume and mute, input source, color preset and optional RGB gain\n* OSD feedback, keyboard shortcuts, custom display names and visibility\n* Fast ddcutil-service backend with automatic ddcutil CLI fallback\n\nRequires ddcutil and a DDC/CI-capable monitor. Local only: no telemetry and no network access.",
+  "shell-version": ["49", "50", "51"],
+  "settings-schema": "org.gnome.shell.extensions.veld-monitor-controls",
+  "gettext-domain": "veld-monitor-controls",
+  "version-name": "1.0.0",
+  "url": "https://github.com/Veldhost/veld-monitor-controls"
+}

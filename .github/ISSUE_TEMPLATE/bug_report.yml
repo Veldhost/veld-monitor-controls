@@ -1,0 +1,57 @@
+name: Bug report
+description: Report a problem with the extension
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please include enough detail to reproduce it.
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: gnome
+    attributes:
+      label: GNOME Shell version
+      placeholder: "51.1"
+    validations:
+      required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      placeholder: "Arch Linux, Fedora 43, Ubuntu 25.10…"
+    validations:
+      required: true
+  - type: input
+    id: monitor
+    attributes:
+      label: Monitor model and connection
+      placeholder: "LG UltraGear 27GP850, DisplayPort"
+  - type: input
+    id: backend
+    attributes:
+      label: Backend
+      description: Automatic, ddcutil-service, or ddcutil CLI
+  - type: textarea
+    id: ddcutil
+    attributes:
+      label: ddcutil detect output
+      description: Remove serial numbers if you prefer.
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Enable Debug logging in preferences and paste relevant journal lines.
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag screenshots here if they help explain the problem.

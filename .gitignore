@@ -1,0 +1,6 @@
+dist/
+.build/
+schemas/gschemas.compiled
+.dev/
+*.zip
+*.log

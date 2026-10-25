@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project page
+    url: https://veldhost.eu/open-source/veld-monitor-controls
+    about: Features, screenshots and setup instructions
+  - name: Security report
+    url: https://github.com/Veldhost/veld-monitor-controls/security/advisories/new
+    about: Report a vulnerability privately
