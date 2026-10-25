@@ -85,16 +85,6 @@
       <summary>Brightness shortcut step</summary>
     </key>
 
-    <key name="ddcutil-path" type="s">
-      <default>'ddcutil'</default>
-      <summary>Path to the ddcutil binary</summary>
-    </key>
-
-    <key name="ddcutil-extra-args" type="s">
-      <default>''</default>
-      <summary>Extra arguments passed to ddcutil</summary>
-    </key>
-
     <key name="sleep-multiplier" type="d">
       <default>1.0</default>
       <range min="0.1" max="10.0"/>

@@ -15,7 +15,7 @@ import {QuickSettingsView} from './src/shell/quickSettingsView.js';
 
 const START_DELAY_MS = 600;
 const MONITOR_SETTLE_MS = 500;
-const BACKEND_KEYS = ['backend', 'ddcutil-path', 'ddcutil-extra-args', 'sleep-multiplier'];
+const BACKEND_KEYS = ['backend', 'sleep-multiplier'];
 
 export default class VeldMonitorControlsExtension extends Extension {
     enable() {
@@ -153,9 +153,6 @@ export default class VeldMonitorControlsExtension extends Extension {
     }
 
     _removeKeybindings() {
-        if (!this._keybindingsAdded)
-            return;
-
         Main.wm.removeKeybinding('brightness-up');
         Main.wm.removeKeybinding('brightness-down');
         this._keybindingsAdded = false;

@@ -39,18 +39,6 @@ function addCombo(group, settings, key, title, subtitle, values) {
     return row;
 }
 
-function addEntry(group, settings, key, title, subtitle) {
-    const row = new Adw.EntryRow({title, text: settings.get_string(key)});
-    row.connect('changed', () => {
-        if (row.text !== settings.get_string(key))
-            settings.set_string(key, row.text);
-    });
-    group.add(row);
-    if (subtitle)
-        row.tooltip_text = subtitle;
-    return row;
-}
-
 function addSpin(group, settings, key, title, subtitle, lower, upper, step = 1) {
     const row = new Adw.SpinRow({
         title,
@@ -128,15 +116,14 @@ function addShortcutRow(group, settings, key, title) {
 }
 
 async function checkSetup(window, settings) {
-    const path = settings.get_string('ddcutil-path').trim() || 'ddcutil';
-    const hasCli = cliIsAvailable(settings);
+    const hasCli = cliIsAvailable();
 
     setStatus(window._ddcutilStatus.row, window._ddcutilStatus.status, {
         ok: hasCli,
         text: hasCli ? _('Available') : _('Not found'),
         detail: hasCli
-            ? _('Using %s.').format(path)
-            : _('Install ddcutil or update the path in the Backend section.'),
+            ? _('ddcutil was found in PATH.')
+            : _('Install ddcutil so that it is available in PATH.'),
     });
 
     const hasService = await serviceIsAvailable();
@@ -300,11 +287,6 @@ export default class VeldMonitorControlsPreferences extends ExtensionPreferences
                 {value: 'service', label: _('ddcutil-service only')},
                 {value: 'cli', label: _('ddcutil command only')},
             ]);
-
-        addEntry(backends, settings, 'ddcutil-path', _('ddcutil path'),
-            _('Used by the CLI backend; usually just “ddcutil”.'));
-        addEntry(backends, settings, 'ddcutil-extra-args', _('Extra ddcutil arguments'),
-            _('Advanced: additional global options for the ddcutil command.'));
 
         const setup = new Adw.PreferencesGroup({
             title: _('Setup check'),

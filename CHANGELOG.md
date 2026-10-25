@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2 — 2026-10-25
+
+- Run `ddcutil` from PATH with the arguments written out at each call; the
+  "ddcutil path" and "Extra ddcutil arguments" settings were removed
+- Remove an unneeded check before removing keybindings
+
 ## 1.0.1 — 2026-10-25
 
 - Stop pending work through the existing cancellables instead of separate destroyed flags

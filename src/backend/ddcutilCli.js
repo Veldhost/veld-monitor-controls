@@ -5,7 +5,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 
 import {parseCapabilities} from '../core/capabilities.js';
-import {hexByte, logError} from '../core/util.js';
+import {hexByte} from '../core/util.js';
 import {parseDetectOutput, parseGetVcpLines} from './parsers.js';
 
 Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
@@ -21,23 +21,11 @@ const ERROR_PATTERNS = [
 
 export class DdcutilCliBackend {
     constructor(settings) {
-        this._settings = settings;
         this._cancellable = new Gio.Cancellable();
         this._processes = new Set();
         this._timeouts = new Set();
         this._lock = Promise.resolve();
-        this._path = settings.get_string('ddcutil-path').trim() || 'ddcutil';
-        this._sleepMultiplier = settings.get_double('sleep-multiplier');
-        this._extraArgs = [];
-
-        const extra = settings.get_string('ddcutil-extra-args').trim();
-        if (extra) {
-            try {
-                this._extraArgs = GLib.shell_parse_argv(extra)[1];
-            } catch (error) {
-                logError('ignoring invalid ddcutil-extra-args', error.message);
-            }
-        }
+        this._sleepMultiplier = String(settings.get_double('sleep-multiplier'));
     }
 
     get name() {
@@ -45,18 +33,10 @@ export class DdcutilCliBackend {
     }
 
     async init() {
-        if (!GLib.find_program_in_path(this._path))
-            throw new Error(`ddcutil was not found: ${this._path}`);
+        if (!cliIsAvailable())
+            throw new Error('ddcutil was not found');
 
         return true;
-    }
-
-    _baseArgs() {
-        return [
-            this._path,
-            '--sleep-multiplier', String(this._sleepMultiplier),
-            ...this._extraArgs,
-        ];
     }
 
     _spawn(args) {
@@ -119,13 +99,15 @@ export class DdcutilCliBackend {
 
     async detect(cancellable = null) {
         const output = await this._runSerialized(
-            [...this._baseArgs(), 'detect', '--terse'], cancellable);
+            ['ddcutil', '--sleep-multiplier', this._sleepMultiplier, 'detect', '--terse'],
+            cancellable);
         return parseDetectOutput(output);
     }
 
     async getCapabilities(display, cancellable = null) {
         const output = await this._runSerialized(
-            [...this._baseArgs(), '--bus', String(display.bus), 'capabilities', '--brief'],
+            ['ddcutil', '--sleep-multiplier', this._sleepMultiplier,
+                '--bus', String(display.bus), 'capabilities', '--brief'],
             cancellable);
         return parseCapabilities(output);
     }
@@ -135,7 +117,8 @@ export class DdcutilCliBackend {
             return new Map();
 
         const output = await this._runSerialized(
-            [...this._baseArgs(), 'getvcp', ...codes.map(code => hexByte(code)),
+            ['ddcutil', '--sleep-multiplier', this._sleepMultiplier,
+                'getvcp', ...codes.map(code => hexByte(code)),
                 '--bus', String(display.bus), '--terse'],
             cancellable);
 
@@ -155,7 +138,7 @@ export class DdcutilCliBackend {
 
     async setValue(display, code, value, {verify = false, cancellable = null} = {}) {
         const args = [
-            ...this._baseArgs(),
+            'ddcutil', '--sleep-multiplier', this._sleepMultiplier,
             'setvcp', hexByte(code), String(Math.max(0, Math.round(value))),
             '--bus', String(display.bus),
         ];
@@ -179,7 +162,6 @@ export class DdcutilCliBackend {
     }
 }
 
-export function cliIsAvailable(settings) {
-    const path = settings.get_string('ddcutil-path').trim() || 'ddcutil';
-    return Boolean(GLib.find_program_in_path(path));
+export function cliIsAvailable() {
+    return GLib.find_program_in_path('ddcutil') !== null;
 }
