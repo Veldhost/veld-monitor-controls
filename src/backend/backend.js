@@ -23,7 +23,7 @@ async function start(Backend, settings) {
 export async function createBackend(settings, cancellable = null) {
     const requested = settings.get_string('backend');
     const serviceAvailable = requested === 'cli' ? false : await serviceIsAvailable(cancellable);
-    const cliAvailable = requested === 'service' ? false : cliIsAvailable(settings);
+    const cliAvailable = requested === 'service' ? false : cliIsAvailable();
 
     if (requested === 'service') {
         if (!serviceAvailable)
