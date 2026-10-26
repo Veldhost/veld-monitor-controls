@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright (C) 2026 Janis and contributors
 
-import {normalizeConnector, normalizeName, parseNumber} from '../core/util.js';
+import {displayKey, normalizeConnector, parseNumber} from '../core/util.js';
 
 /**
  * Parse `ddcutil detect --terse` output.  Kept free of Gio so it can be
@@ -16,7 +16,7 @@ export function parseDetectOutput(text) {
             return;
 
         if (current.bus || current.connector || current.model) {
-            current.key = `${normalizeName(current.model) || 'display'}#${normalizeName(current.serial) || normalizeName(current.connector) || 'unknown'}`;
+            current.key = displayKey(current.model, current.serial, current.connector);
             displays.push(current);
         }
         current = null;

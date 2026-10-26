@@ -2,7 +2,6 @@
 // Copyright (C) 2026 Janis and contributors
 
 import Gio from 'gi://Gio';
-import GLib from 'gi://GLib';
 
 import {callSession, getSessionProperty} from '../core/dbus.js';
 import {parseCapabilities} from '../core/capabilities.js';
@@ -17,10 +16,8 @@ const VCP_MULTI_TYPE = '(isayu)';
 const VCP_MULTI_REPLY_TYPE = '(a(yqqs)is)';
 
 export class DdcutilServiceBackend {
-    constructor(settings = null) {
-        this._settings = settings;
+    constructor() {
         this._cancellable = new Gio.Cancellable();
-        this._version = null;
         this._displayAttributes = null;
     }
 
@@ -28,16 +25,10 @@ export class DdcutilServiceBackend {
         return 'ddcutil-service';
     }
 
-    get version() {
-        return this._version;
-    }
-
     async init() {
-        const version = await getSessionProperty(
+        await getSessionProperty(
             SERVICE_NAME, OBJECT_PATH, INTERFACE, 'ServiceInterfaceVersion',
             this._cancellable, 5000);
-        this._version = version.deepUnpack();
-        return true;
     }
 
     async _call(method, signature, args, replyType = null, cancellable = null) {
@@ -94,7 +85,7 @@ export class DdcutilServiceBackend {
             displays.push({
                 displayNumber: values.display_number,
                 bus: values.i2c_bus ? String(values.i2c_bus) : null,
-                connector: connector ?? '',
+                connector,
                 vendor: values.manufacturer_id ?? '',
                 model,
                 serial,

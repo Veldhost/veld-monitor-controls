@@ -2,16 +2,17 @@
 // Copyright (C) 2026 Janis and contributors
 
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import St from 'gi://St';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
-import {QuickSlider} from 'resource:///org/gnome/shell/ui/quickSettings.js';
+import {QuickSlider, SystemIndicator} from 'resource:///org/gnome/shell/ui/quickSettings.js';
 import {Slider} from 'resource:///org/gnome/shell/ui/slider.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {permittedValues, valueName, VCP} from '../core/capabilities.js';
-import {fmtPercent, logDebug} from '../core/util.js';
+import {fmtPercent, logDebug, logError} from '../core/util.js';
 import {showBrightnessOsd} from './osd.js';
 
 function radioItem(label, callback) {
@@ -27,9 +28,11 @@ export class QuickSettingsView {
         this._settings = settings;
         this._masterDragging = false;
         this._pendingMaster = null;
-        this._refreshing = false;
         this._rows = new Map();
         this._signature = '';
+        this._indicator = null;
+        this._indicatorAddedId = 0;
+        this._placeIdleId = 0;
 
         this._buildSlider();
         this._place();
@@ -38,11 +41,41 @@ export class QuickSettingsView {
 
     _place() {
         const quickSettings = Main.panel.statusArea.quickSettings;
+        const placement = this._settings.get_string('placement');
+
+        if (placement === 'gnome-default') {
+            this._indicator = new SystemIndicator();
+            this._indicator.quickSettingsItems.push(this._slider);
+            quickSettings.addExternalIndicator(this._indicator, 2);
+            return;
+        }
+
+        // At startup GNOME creates its volume indicator asynchronously, then
+        // adds it to the panel and its items to the menu in one run.
+        if (!quickSettings._volumeOutput) {
+            this._indicatorAddedId = quickSettings._indicators.connect('child-added', () => {
+                if (!quickSettings._volumeOutput)
+                    return;
+
+                quickSettings._indicators.disconnect(this._indicatorAddedId);
+                this._indicatorAddedId = 0;
+                this._placeIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                    this._placeIdleId = 0;
+                    this._placeNextToVolume(placement);
+                    return GLib.SOURCE_REMOVE;
+                });
+            });
+            return;
+        }
+
+        this._placeNextToVolume(placement);
+    }
+
+    _placeNextToVolume(placement) {
+        const quickSettings = Main.panel.statusArea.quickSettings;
         // GNOME's volume slider; Quick Settings has no public getter for it.
         const volume = quickSettings._volumeOutput.quickSettingsItems.at(-1);
-        const sibling = this._settings.get_string('placement') === 'below-volume'
-            ? volume.get_next_sibling()
-            : volume;
+        const sibling = placement === 'below-volume' ? volume.get_next_sibling() : volume;
         quickSettings.menu.insertItemBefore(this._slider, sibling, 2);
     }
 
@@ -123,17 +156,8 @@ export class QuickSettingsView {
             showBrightnessOsd(this._manager.displays, value);
     }
 
-    async _refreshDisplays() {
-        if (this._refreshing)
-            return;
-
-        this._refreshing = true;
-        this._setRefreshBusy(true);
-        await this._manager.refresh();
-        if (!this._slider)
-            return;
-        this._refreshing = false;
-        this._setRefreshBusy(false);
+    _refreshDisplays() {
+        this._manager.refresh().catch(error => logError('refresh failed', error.message));
     }
 
     _setRefreshBusy(busy) {
@@ -149,6 +173,8 @@ export class QuickSettingsView {
     }
 
     sync() {
+        this._setRefreshBusy(this._manager.refreshing);
+
         const displays = this._manager.displays;
         const brightnessDisplays = displays.filter(display =>
             this._manager.getControlRange(display, VCP.BRIGHTNESS) !== null);
@@ -229,15 +255,13 @@ export class QuickSettingsView {
 
     _hasMoreControls(display) {
         if (this._settings.get_boolean('show-contrast') &&
-            this._manager.getControlRange(display, VCP.CONTRAST)) {
+            this._manager.getControlRange(display, VCP.CONTRAST))
             return true;
-        }
 
         if (this._settings.get_boolean('show-volume')) {
             if (this._manager.getControlRange(display, VCP.AUDIO_VOLUME) ||
-                display.capabilities.supported.has(VCP.AUDIO_MUTE)) {
+                display.capabilities.supported.has(VCP.AUDIO_MUTE))
                 return true;
-            }
         }
 
         if (this._settings.get_boolean('show-rgb')) {
@@ -286,9 +310,6 @@ export class QuickSettingsView {
                     this._addSlider(row, menu, code, label, `${label} ${name}`);
             }
         }
-
-        if (menu.numMenuItems === 0)
-            row.more.visible = false;
     }
 
     _addSlider(row, menu, code, label, accessibleName) {
@@ -391,9 +412,11 @@ export class QuickSettingsView {
             row.display = display;
             const name = this._manager.displayName(display);
             const brightness = this._manager.getControlFraction(display, VCP.BRIGHTNESS);
-            const suffix = !display.available
-                ? ` — ${_('unavailable')}`
-                : brightness === null ? '' : ` — ${fmtPercent(brightness)}`;
+            let suffix = '';
+            if (!display.available)
+                suffix = ` — ${_('unavailable')}`;
+            else if (brightness !== null)
+                suffix = ` — ${fmtPercent(brightness)}`;
 
             row.header.label.text = `${name}${suffix}`;
 
@@ -428,10 +451,16 @@ export class QuickSettingsView {
     }
 
     destroy() {
+        if (this._indicatorAddedId)
+            Main.panel.statusArea.quickSettings._indicators.disconnect(this._indicatorAddedId);
+        if (this._placeIdleId)
+            GLib.source_remove(this._placeIdleId);
+
         this._unsubscribe();
         this._slider.menu.destroy();
         this._slider.destroy();
         this._slider = null;
+        this._indicator?.destroy();
         this._rows.clear();
     }
 }

@@ -60,9 +60,9 @@ export function valueName(code, value) {
 function findMatchingParen(text, openIndex) {
     let depth = 0;
     for (let i = openIndex; i < text.length; i++) {
-        if (text[i] === '(')
+        if (text[i] === '(') {
             depth++;
-        else if (text[i] === ')') {
+        } else if (text[i] === ')') {
             depth--;
             if (depth === 0)
                 return i;
@@ -96,7 +96,7 @@ export function parseCapabilities(rawText) {
     if (vcpIndex === -1)
         return result;
 
-    const openIndex = vcpIndex + 3; // points at '('
+    const openIndex = vcpIndex + 'vcp'.length;
     const closeIndex = findMatchingParen(rawText, openIndex);
     if (closeIndex === -1)
         return result;
@@ -145,5 +145,5 @@ export function parseCapabilities(rawText) {
 }
 
 export function permittedValues(capabilities, code) {
-    return capabilities?.values?.get(code) ?? [];
+    return capabilities.values.get(code) ?? [];
 }

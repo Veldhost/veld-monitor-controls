@@ -33,8 +33,8 @@ export class DdcManager {
         return this._displays.filter(display => !hidden.has(display.key));
     }
 
-    get backendName() {
-        return this._backend?.name ?? 'unavailable';
+    get refreshing() {
+        return this._refreshing;
     }
 
     get hasBrightness() {
@@ -87,10 +87,11 @@ export class DdcManager {
     }
 
     async refresh() {
-        if (!this._backend || this._refreshing || this._cancellable.is_cancelled())
+        if (!this._backend || this._refreshing)
             return false;
 
         this._refreshing = true;
+        this._emit();
 
         try {
             const layout = await getMutterDisplays(this._cancellable);
@@ -155,22 +156,21 @@ export class DdcManager {
                 return false;
 
             this._displays = displays;
-            this._emit();
             return true;
         } catch (error) {
             if (this._cancellable.is_cancelled())
                 return false;
 
             this._warn('refresh', error.message);
-            this._emit();
             return false;
         } finally {
             this._refreshing = false;
+            this._emit();
         }
     }
 
     async refreshValues() {
-        if (!this._backend || this._refreshingValues || this._cancellable.is_cancelled())
+        if (!this._backend || this._refreshingValues)
             return false;
 
         this._refreshingValues = true;
@@ -240,9 +240,8 @@ export class DdcManager {
 
         if (this._settings.get_boolean('show-contrast'))
             codes.push(VCP.CONTRAST);
-        if (this._settings.get_boolean('show-volume')) {
+        if (this._settings.get_boolean('show-volume'))
             codes.push(VCP.AUDIO_VOLUME, VCP.AUDIO_MUTE);
-        }
         if (this._settings.get_boolean('show-input'))
             codes.push(VCP.INPUT_SOURCE);
         if (this._settings.get_boolean('show-color'))
@@ -333,7 +332,7 @@ export class DdcManager {
             const min = this._minimumRaw(display, VCP.BRIGHTNESS);
             const raw = clamp(Math.round(fraction * range.max), min, range.max);
             display.values[VCP.BRIGHTNESS] = {
-                ...(display.values[VCP.BRIGHTNESS] ?? {}),
+                ...display.values[VCP.BRIGHTNESS] ?? {},
                 current: raw,
                 max: range.max,
             };
@@ -351,7 +350,7 @@ export class DdcManager {
         const min = this._minimumRaw(display, code);
         const raw = clamp(Math.round(fraction * range.max), min, range.max);
         display.values[code] = {
-            ...(display.values[code] ?? {}),
+            ...display.values[code] ?? {},
             current: raw,
             max: range.max,
         };
@@ -364,7 +363,7 @@ export class DdcManager {
             return;
 
         display.values[code] = {
-            ...(display.values[code] ?? {}),
+            ...display.values[code] ?? {},
             current: value,
         };
         this._queueWrite(display, code, value);

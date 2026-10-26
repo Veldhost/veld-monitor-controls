@@ -32,6 +32,8 @@ gsettings --schemadir "$EXT_DIR/schemas" set org.gnome.shell enabled-extensions 
     "[\"$UUID\"]" >/dev/null
 gsettings --schemadir "$EXT_DIR/schemas" set \
     org.gnome.shell.extensions.veld-monitor-controls debug-logging true >/dev/null
+gsettings --schemadir "$EXT_DIR/schemas" set \
+    org.gnome.shell.extensions.veld-monitor-controls placement "${VMC_PLACEMENT:-above-volume}" >/dev/null
 
 rm -f "$LOG"
 
@@ -74,6 +76,7 @@ dbus-run-session -- bash -c '
     }
     SCHEMA_DIR="$2"
     set_key placement below-volume
+    set_key placement gnome-default
     set_key placement above-volume
     set_key hidden-displays "[\"x\"]"
     set_key show-rgb true

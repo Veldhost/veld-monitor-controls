@@ -14,7 +14,7 @@ const requested = settings.get_string('backend');
 print(`backend setting: ${requested}`);
 
 const backend = await createBackend(settings);
-print(`using: ${backend.name} ${backend.version ?? ''}`);
+print(`using: ${backend.name}`);
 
 const ddc = await backend.detect();
 print(`detected: ${ddc.length}`);

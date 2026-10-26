@@ -26,9 +26,10 @@ export async function createBackend(settings, cancellable = null) {
     const cliAvailable = requested === 'service' ? false : cliIsAvailable();
 
     if (requested === 'service') {
-        if (!serviceAvailable)
+        if (!serviceAvailable) {
             throw new BackendUnavailableError(
                 'ddcutil-service is not available. Install it or select the CLI backend.');
+        }
         return start(DdcutilServiceBackend, settings);
     }
 

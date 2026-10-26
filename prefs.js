@@ -115,7 +115,7 @@ function addShortcutRow(group, settings, key, title) {
     group.add(row);
 }
 
-async function checkSetup(window, settings) {
+async function checkSetup(window) {
     const hasCli = cliIsAvailable();
 
     setStatus(window._ddcutilStatus.row, window._ddcutilStatus.status, {
@@ -126,8 +126,8 @@ async function checkSetup(window, settings) {
             : _('Install ddcutil so that it is available in PATH.'),
     });
 
-    const hasService = await serviceIsAvailable();
-    if (window._closed)
+    const hasService = await serviceIsAvailable(window._cancellable);
+    if (window._cancellable.is_cancelled())
         return;
 
     setStatus(window._serviceStatus.row, window._serviceStatus.status, {
@@ -140,9 +140,9 @@ async function checkSetup(window, settings) {
 }
 
 async function loadDisplays(window, settings) {
-    // Each run replaces the rows of the previous one.
-    const generation = ++window._displayGeneration;
-    const current = () => !window._closed && generation === window._displayGeneration;
+    window._displayCancellable.cancel();
+    const cancellable = new Gio.Cancellable();
+    window._displayCancellable = cancellable;
 
     for (const row of window._displayRows)
         window._displayGroup.remove(row);
@@ -152,8 +152,8 @@ async function loadDisplays(window, settings) {
     window._displayStatus.subtitle = '';
 
     try {
-        const backend = await createBackend(settings);
-        if (!current()) {
+        const backend = await createBackend(settings, cancellable);
+        if (cancellable.is_cancelled()) {
             backend.destroy();
             return;
         }
@@ -161,8 +161,8 @@ async function loadDisplays(window, settings) {
         window._backend = backend;
         window._activeBackendRow.subtitle = backend.name;
 
-        const displays = await backend.detect();
-        if (!current())
+        const displays = await backend.detect(cancellable);
+        if (cancellable.is_cancelled())
             return;
 
         window._displayStatus.title = displays.length
@@ -218,7 +218,7 @@ async function loadDisplays(window, settings) {
             window._displayRows.push(row);
         }
     } catch (error) {
-        if (!current())
+        if (cancellable.is_cancelled())
             return;
         window._activeBackendRow.subtitle = _('Unavailable');
         window._displayStatus.title = _('Could not detect displays');
@@ -229,9 +229,9 @@ async function loadDisplays(window, settings) {
 export default class VeldMonitorControlsPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
-        window._closed = false;
+        window._cancellable = new Gio.Cancellable();
+        window._displayCancellable = new Gio.Cancellable();
         window._backend = null;
-        window._displayGeneration = 0;
         window._displayRows = [];
 
         window.title = _('Veld Monitor Controls');
@@ -250,10 +250,11 @@ export default class VeldMonitorControlsPreferences extends ExtensionPreferences
         general.add(placement);
 
         addCombo(placement, settings, 'placement', _('Placement'),
-            _('The slider is placed next to GNOME’s volume slider.'),
+            _('Next to GNOME’s volume slider, or where GNOME places extension items.'),
             [
                 {value: 'above-volume', label: _('Above volume')},
                 {value: 'below-volume', label: _('Below volume')},
+                {value: 'gnome-default', label: _('GNOME default position')},
             ]);
 
         addCombo(placement, settings, 'update-mode', _('Update mode'),
@@ -313,7 +314,7 @@ export default class VeldMonitorControlsPreferences extends ExtensionPreferences
         });
         recheckButton.add_css_class('flat');
         recheckButton.connect('clicked', () => {
-            checkSetup(window, settings);
+            checkSetup(window);
             loadDisplays(window, settings);
         });
         recheckRow.add_suffix(recheckButton);
@@ -323,7 +324,7 @@ export default class VeldMonitorControlsPreferences extends ExtensionPreferences
             _('Open the project documentation in your browser.'),
             TROUBLESHOOTING_URL);
 
-        checkSetup(window, settings);
+        checkSetup(window);
 
         const controls = new Adw.PreferencesPage({
             title: _('Controls'),
@@ -444,7 +445,8 @@ export default class VeldMonitorControlsPreferences extends ExtensionPreferences
             _('Report bugs and request features.'), ISSUES_URL);
 
         window.connect('close-request', () => {
-            window._closed = true;
+            window._cancellable.cancel();
+            window._displayCancellable.cancel();
             window._backend?.destroy();
             window._backend = null;
             return false;
