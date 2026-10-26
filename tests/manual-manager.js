@@ -13,7 +13,7 @@ const manager = new DdcManager(settings, {
 });
 
 const ok = await manager.init();
-print(`init: ${ok}, backend: ${manager.backendName}`);
+print(`init: ${ok}`);
 print(`master: ${manager.getMasterFraction()}`);
 
 for (const display of manager.displays) {

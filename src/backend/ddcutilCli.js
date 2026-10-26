@@ -21,7 +21,6 @@ const ERROR_PATTERNS = [
 
 export class DdcutilCliBackend {
     constructor(settings) {
-        this._cancellable = new Gio.Cancellable();
         this._processes = new Set();
         this._timeouts = new Set();
         this._lock = Promise.resolve();
@@ -32,11 +31,9 @@ export class DdcutilCliBackend {
         return 'ddcutil CLI';
     }
 
-    async init() {
+    init() {
         if (!cliIsAvailable())
             throw new Error('ddcutil was not found');
-
-        return true;
     }
 
     _spawn(args) {
@@ -48,9 +45,8 @@ export class DdcutilCliBackend {
         return launcher.spawnv(args);
     }
 
-    async _run(args, cancellable = null) {
-        if (this._cancellable.is_cancelled())
-            throw new Error('ddcutil backend destroyed');
+    async _run(args, cancellable) {
+        cancellable.set_error_if_cancelled();
 
         const process = this._spawn(args);
         this._processes.add(process);
@@ -84,7 +80,7 @@ export class DdcutilCliBackend {
 
     // One ddcutil process at a time, so displays on the same GPU do not
     // congest the I2C bus.
-    async _runSerialized(args, cancellable = null) {
+    async _runSerialized(args, cancellable) {
         const previous = this._lock;
         let release;
         this._lock = new Promise(resolve => (release = resolve));
@@ -97,14 +93,14 @@ export class DdcutilCliBackend {
         }
     }
 
-    async detect(cancellable = null) {
+    async detect(cancellable) {
         const output = await this._runSerialized(
             ['ddcutil', '--sleep-multiplier', this._sleepMultiplier, 'detect', '--terse'],
             cancellable);
         return parseDetectOutput(output);
     }
 
-    async getCapabilities(display, cancellable = null) {
+    async getCapabilities(display, cancellable) {
         const output = await this._runSerialized(
             ['ddcutil', '--sleep-multiplier', this._sleepMultiplier,
                 '--bus', String(display.bus), 'capabilities', '--brief'],
@@ -112,7 +108,7 @@ export class DdcutilCliBackend {
         return parseCapabilities(output);
     }
 
-    async getValues(display, codes, cancellable = null) {
+    async getValues(display, codes, cancellable) {
         if (codes.length === 0)
             return new Map();
 
@@ -136,7 +132,7 @@ export class DdcutilCliBackend {
         return values;
     }
 
-    async setValue(display, code, value, {verify = false, cancellable = null} = {}) {
+    async setValue(display, code, value, {verify, cancellable}) {
         const args = [
             'ddcutil', '--sleep-multiplier', this._sleepMultiplier,
             'setvcp', hexByte(code), String(Math.max(0, Math.round(value))),
@@ -150,8 +146,6 @@ export class DdcutilCliBackend {
     }
 
     destroy() {
-        this._cancellable.cancel();
-
         for (const id of this._timeouts)
             GLib.source_remove(id);
         this._timeouts.clear();

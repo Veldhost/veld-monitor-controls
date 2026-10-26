@@ -39,7 +39,7 @@ export async function getMutterDisplays(cancellable = null) {
     });
 
     const displays = [];
-    for (const [monitorSpec, _modes, properties] of monitorSpecs) {
+    for (const [monitorSpec, , properties] of monitorSpecs) {
         const [connector, vendor, model, serial] = monitorSpec;
         if (!connector || connector.startsWith('None'))
             continue;
@@ -57,7 +57,6 @@ export async function getMutterDisplays(cancellable = null) {
             enabled: enabledConnectors.has(normalizedConnector),
             builtin: properties['is-builtin']?.unpack() ?? false,
             logicalIndex: logicalIndexes.get(normalizedConnector) ?? -1,
-            key: `${normalizeName(model)}#${normalizeName(serial) || normalizeName(normalizedConnector)}`,
         });
     }
 
@@ -83,7 +82,6 @@ export function pairDisplays(mutterDisplays, ddcDisplays) {
 
     for (const ddc of ddcDisplays) {
         const ddcModel = normalizeName(ddc.model);
-        const ddcVendor = normalizeName(ddc.vendor);
         const ddcSerial = normalizeName(ddc.serial);
         const ddcConnector = normalizeConnector(ddc.connector);
 
@@ -133,7 +131,7 @@ export function pairDisplays(mutterDisplays, ddcDisplays) {
             logicalIndex: mutter?.logicalIndex ?? -1,
             builtin: mutter?.builtin ?? false,
             enabled: mutter?.enabled ?? true,
-            key: ddc.key || `${normalizeName(model)}#${normalizeName(serial) || normalizeName(connector)}`,
+            key: ddc.key,
         });
     }
 

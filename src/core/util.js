@@ -37,17 +37,11 @@ export function hexByte(value) {
     return Number(value).toString(16).padStart(2, '0').toUpperCase();
 }
 
-export function parseNumber(value) {
-    if (typeof value === 'number')
-        return value;
+export function parseNumber(token) {
+    if (/^x/i.test(token))
+        return parseInt(token.slice(1), 16);
 
-    if (typeof value !== 'string')
-        return NaN;
-
-    if (value.toLowerCase().startsWith('x'))
-        return parseInt(value.slice(1), 16);
-
-    return parseInt(value, 10);
+    return parseInt(token, 10);
 }
 
 export function fmtPercent(fraction) {

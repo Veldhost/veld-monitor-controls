@@ -16,7 +16,6 @@ const manager = new DdcManager(settings, {
 });
 
 await manager.init();
-print(`backend: ${manager.backendName}`);
 
 for (const display of manager.displays) {
     const range = manager.getControlRange(display, VCP.BRIGHTNESS);

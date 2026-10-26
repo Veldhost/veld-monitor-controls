@@ -31,7 +31,7 @@ It is designed to feel native:
 
 ## Features
 
-- **Master brightness slider** above or below GNOME volume
+- **Master brightness slider** above or below GNOME volume, or in GNOME's default position
 - **Per-monitor brightness** sliders with live percentages
 - **Contrast**, **monitor volume**, **mute**, **input source**, **color preset**
   and optional **RGB gain**

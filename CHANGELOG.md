@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.3 — 2026-10-26
+
+- Fix an error at login when Quick Settings is not ready yet: the slider now
+  waits for GNOME's volume slider before placing itself next to it
+- New placement option: GNOME default position, using GNOME's own API for
+  extension items
+- Brightness shortcuts are added on enable and removed on disable
+- Free the warning list in `disable()`; warnings can show again after unlocking
+- The preferences window cancels its detection with a `Gio.Cancellable`; the CLI
+  backend stops through the caller's cancellable
+- Remove unused code and a duplicated display-key helper; fix lint findings
+
 ## 1.0.2 — 2026-10-25
 
 - Run `ddcutil` from PATH with the arguments written out at each call; the

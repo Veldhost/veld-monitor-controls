@@ -20,14 +20,12 @@ const BACKEND_KEYS = ['backend', 'sleep-multiplier'];
 export default class VeldMonitorControlsExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
-        this._keybindingsAdded = false;
-        // Kept across disable/enable so warnings are not repeated on every unlock.
-        this._notified ??= new Set();
+        this._notified = new Set();
 
         this._manager = new DdcManager(this._settings, {
             onWarning: message => this._notify(message),
         });
-        this._manager.subscribe(() => this._updateKeybindings());
+        this._addKeybindings();
 
         this._settingsChangedId = this._settings.connect('changed', (_settings, key) =>
             this._onSettingChanged(key));
@@ -74,6 +72,7 @@ export default class VeldMonitorControlsExtension extends Extension {
         this._manager.destroy();
         this._manager = null;
 
+        this._notified = null;
         this._settings = null;
     }
 
@@ -118,22 +117,11 @@ export default class VeldMonitorControlsExtension extends Extension {
             return;
         }
 
-        if (key === 'hidden-displays')
-            this._updateKeybindings();
-
         this._manager.updateSettings();
         this._view?.refresh();
     }
 
-    _updateKeybindings() {
-        if (!this._manager.hasBrightness) {
-            this._removeKeybindings();
-            return;
-        }
-
-        if (this._keybindingsAdded)
-            return;
-
+    _addKeybindings() {
         // Mutter rebinds these by itself when the settings keys change.
         Main.wm.addKeybinding(
             'brightness-up',
@@ -148,17 +136,17 @@ export default class VeldMonitorControlsExtension extends Extension {
             Meta.KeyBindingFlags.NONE,
             Shell.ActionMode.NORMAL | Shell.ActionMode.OVERVIEW,
             () => this._stepBrightness(-1));
-
-        this._keybindingsAdded = true;
     }
 
     _removeKeybindings() {
         Main.wm.removeKeybinding('brightness-up');
         Main.wm.removeKeybinding('brightness-down');
-        this._keybindingsAdded = false;
     }
 
     _stepBrightness(direction) {
+        if (!this._manager.hasBrightness)
+            return;
+
         const current = this._manager.getMasterFraction() ?? 0.5;
         const step = this._settings.get_int('shortcut-step-percent') / 100;
         const next = clamp(current + direction * step, 0, 1);
