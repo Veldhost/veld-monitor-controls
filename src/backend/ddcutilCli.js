@@ -13,7 +13,6 @@ Gio._promisify(Gio.Subprocess.prototype, 'communicate_utf8_async');
 const ERROR_PATTERNS = [
     /DDC communication failed/i,
     /Verification failed/i,
-    /Invalid display/i,
     /No monitor detected/i,
     /Error in/i,
     /failed to/i,

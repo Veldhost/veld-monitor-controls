@@ -52,6 +52,15 @@ equal('detect second connector', displays[1].connector, 'DP-3');
 
 check('phantom display ignored', parseDetectOutput(`Phantom display\n   I2C bus: /dev/i2c-99\n`) .length === 0);
 
+const invalidDisplayText = `Invalid display
+   I2C bus:          /dev/i2c-1
+   DRM connector:    card1-eDP-1
+   drm_connector_id: 102
+   Monitor:          BOE::
+`;
+equal('invalid display before a valid one', parseDetectOutput(`${invalidDisplayText}\n${detectText}`).length, 2);
+equal('invalid display after a valid one', parseDetectOutput(`${detectText}\n${invalidDisplayText}`).length, 2);
+
 equal('continuous VCP', parseGetVcpOutput('VCP 10 C 4 100'), {
     code: 0x10,
     current: 4,

@@ -26,7 +26,7 @@ export function parseDetectOutput(text) {
         const line = rawLine.trim();
 
         if (/^(Invalid|Phantom) display\b/i.test(line)) {
-            current = null;
+            finish();
             continue;
         }
 

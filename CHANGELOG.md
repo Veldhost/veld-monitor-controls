@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4 — 2026-11-07
+
+- Fix "Could not detect displays" when a display without DDC/CI, such as a
+  laptop panel, is connected: `ddcutil detect` lists it as an invalid display,
+  which is not an error
+- Keep a display listed just before an invalid or phantom one
+
 ## 1.0.3 — 2026-10-26
 
 - Fix an error at login when Quick Settings is not ready yet: the slider now
